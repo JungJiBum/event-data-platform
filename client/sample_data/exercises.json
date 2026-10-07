@@ -1,0 +1,21 @@
+{
+    "strength": [
+        {
+            "name": "squat"
+        },
+        {
+            "name": "bench_press"
+        },
+        {
+            "name": "deadlift"
+        }
+    ],
+    "cardio": [
+        {
+            "name": "running"
+        },
+        {
+            "name": "cycling"
+        }
+    ]
+}

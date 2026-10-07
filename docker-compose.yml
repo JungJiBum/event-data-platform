@@ -1,0 +1,85 @@
+services:
+  client:
+    build:
+      context: ./client
+    env_file:
+      - .env
+    depends_on:
+      - collector
+    networks:
+      - event-platform-network
+      
+  collector:
+    build:
+      context: ./collector
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./collector:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - event-platform-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    networks:
+      - event-platform-network
+
+  worker:
+    build:
+      context: ./collector
+    command: celery -A task_queue.task_queue worker --loglevel=info
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
+    networks:
+      - event-platform-network      
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - event-platform-network
+  
+  dashboard:
+    build:
+      context: ./dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./dashboard:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - event-platform-network
+
+volumes:
+  postgres_data:
+
+networks:
+  event-platform-network:
+    name: event-platform-network
